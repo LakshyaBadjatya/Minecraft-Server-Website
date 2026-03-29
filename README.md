@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BedWars Server Website
 
-## Getting Started
+A Minecraft BedWars server website built with Next.js, Framer Motion, and Tailwind CSS featuring a dark Minecraft-themed UI with glassmorphism design.
 
-First, run the development server:
+## Features
+
+- **Live Server Status** — Real-time player count, latency, and online/offline status via Minecraft server query
+- **Leaderboard** — Player rankings pulled from the BedWars SQLite database (sortable by wins, kills, finals, beds)
+- **Rank Store** — 5 purchasable ranks (VIP, VIP+, MVP, MVP+, MVP++) with automatic in-game application via LuckPerms
+- **Coupon System** — Admin panel to generate discount codes with custom percentages, max uses, and expiry dates
+- **User Auth** — Registration and login system with JWT cookies and bcrypt password hashing
+- **Animated UI** — Framer Motion animations throughout: floating particles, spring transitions, shimmer effects, animated counters
+
+## Tech Stack
+
+- **Next.js 16** (App Router)
+- **TypeScript**
+- **Tailwind CSS v4**
+- **Framer Motion**
+- **better-sqlite3** (reads BedWars player data + auth database)
+- **LuckPerms JSON storage** (direct file writes for rank application)
+
+## Setup
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Create Admin User
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npx tsx scripts/create-admin.ts
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Default admin credentials: `admin` / `admin123`
 
-## Learn More
+### Configuration
 
-To learn more about Next.js, take a look at the following resources:
+Update paths in these files to match your server location:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `src/lib/db.ts` — BedWars player database path
+- `src/lib/rcon.ts` — LuckPerms JSON storage path
+- `src/lib/minecraft-server.ts` — Server host/port for status queries
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Server IP
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+**play.sukhma.in**
