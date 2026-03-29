@@ -9,6 +9,7 @@ export interface Rank {
   prefix: string;
   features: string[];
   popular?: boolean;
+  tebexPackageId?: number; // Set these after creating packages in Tebex dashboard
 }
 
 export const ranks: Rank[] = [

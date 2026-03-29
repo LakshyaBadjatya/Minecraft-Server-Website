@@ -1,14 +1,16 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { ranks } from "@/lib/ranks";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-export default function StorePage() {
+function StoreContent() {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedRank, setSelectedRank] = useState<string | null>(null);
   const [mcUsername, setMcUsername] = useState("");
   const [couponCode, setCouponCode] = useState("");
@@ -22,6 +24,23 @@ export default function StorePage() {
     success: boolean;
     message: string;
   } | null>(null);
+
+  // Handle return from Tebex checkout
+  useEffect(() => {
+    if (searchParams.get("success") === "true") {
+      setPurchaseResult({
+        success: true,
+        message: "Payment successful! Your rank will be applied automatically within 2 minutes.",
+      });
+      router.replace("/store");
+    } else if (searchParams.get("cancelled") === "true") {
+      setPurchaseResult({
+        success: false,
+        message: "Payment was cancelled.",
+      });
+      router.replace("/store");
+    }
+  }, [searchParams, router]);
 
   const validateCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -38,23 +57,47 @@ export default function StorePage() {
   };
 
   const handlePurchase = async (rankId: string) => {
-    if (!user) {
+    const targetMc = mcUsername.trim() || user?.minecraftUsername;
+    if (!targetMc) {
       router.push("/login");
       return;
     }
+
     setPurchasing(true);
     try {
-      const res = await fetch("/api/store/purchase", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          rankId,
-          couponCode: couponStatus?.valid ? couponCode : undefined,
-          minecraftUsername: mcUsername.trim() || undefined,
-        }),
-      });
-      const data = await res.json();
-      setPurchaseResult({ success: res.ok && data.applied, message: data.message || data.error });
+      const rank = ranks.find((r) => r.id === rankId);
+
+      // If rank has a Tebex package ID, use Tebex checkout
+      if (rank?.tebexPackageId) {
+        const res = await fetch("/api/store/create-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            packageId: rank.tebexPackageId,
+            minecraftUsername: targetMc,
+          }),
+        });
+        const data = await res.json();
+        if (res.ok && data.checkoutUrl) {
+          window.location.href = data.checkoutUrl;
+          return;
+        }
+        setPurchaseResult({ success: false, message: data.error || "Failed to create checkout" });
+      } else {
+        // Fallback: record purchase for manual application
+        const res = await fetch("/api/store/purchase", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            rankId,
+            couponCode: couponStatus?.valid ? couponCode : undefined,
+            minecraftUsername: targetMc,
+          }),
+        });
+        const data = await res.json();
+        setPurchaseResult({ success: res.ok, message: data.message || data.error });
+      }
+
       setSelectedRank(null);
       setMcUsername("");
     } catch {
@@ -499,5 +542,13 @@ export default function StorePage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function StorePage() {
+  return (
+    <Suspense fallback={<div className="min-h-[80vh]" />}>
+      <StoreContent />
+    </Suspense>
   );
 }

@@ -18,7 +18,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid rank" }, { status: 400 });
     }
 
-    // Use provided MC username or fall back to account's MC username
     const db = getAuthDb();
 
     const dbUser = db
@@ -69,10 +68,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Apply rank via RCON
     const rconResult = await applyRank(targetUsername, rankId);
-
-    const status = rconResult.success ? "applied" : "failed";
 
     db.prepare(
       "INSERT INTO purchases (user_id, minecraft_username, rank_id, price, coupon_code, discount_applied, status) VALUES (?, ?, ?, ?, ?, ?, ?)"
@@ -83,37 +79,23 @@ export async function POST(request: Request) {
       finalPrice,
       couponCode || null,
       discount,
-      status
+      "pending"
     );
 
     db.close();
 
-    if (rconResult.success) {
-      return NextResponse.json({
-        message: `${rank.name} rank has been applied to ${targetUsername}! Rejoin the server to see your rank.`,
-        applied: true,
-        purchase: {
-          rank: rank.name,
-          originalPrice: rank.price,
-          discount,
-          finalPrice,
-          minecraftUsername: targetUsername,
-        },
-      });
-    } else {
-      return NextResponse.json({
-        message: `Purchase recorded but rank could not be applied automatically (server may be offline). It will be applied when the server is back online.`,
-        applied: false,
-        rconError: rconResult.response,
-        purchase: {
-          rank: rank.name,
-          originalPrice: rank.price,
-          discount,
-          finalPrice,
-          minecraftUsername: targetUsername,
-        },
-      });
-    }
+    return NextResponse.json({
+      message: `${rank.name} rank purchased for ${targetUsername}! It will be applied shortly by an admin.`,
+      applied: false,
+      command: rconResult.command,
+      purchase: {
+        rank: rank.name,
+        originalPrice: rank.price,
+        discount,
+        finalPrice,
+        minecraftUsername: targetUsername,
+      },
+    });
   } catch (error) {
     console.error("Purchase error:", error);
     return NextResponse.json(
